@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thandiani 400 Kanal Resort · Analysis Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#0E2A2B;--forest:#16403B;--forest2:#1F564E;--mist:#EAF0ED;--paper:#FFFFFF;--hair:rgba(14,42,43,.12);
+    --amber:#D9943B;--amber-d:#B0701E;--pass:#2E7D5B;--pass-bg:#E2F0E8;--fail:#C0492F;--fail-bg:#F7E4DE;
+    --warn:#B0701E;--warn-bg:#FBF0DD;--muted:#647570;--text:#16302E;
+    --disp:'Fraunces',Georgia,serif;--ui:'Inter',system-ui,sans-serif;--mono:'Spline Sans Mono','SFMono-Regular',Menlo,monospace;
+  }
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{font-family:var(--ui);color:var(--text);background:var(--mist);line-height:1.5;-webkit-font-smoothing:antialiased}
+  /* header */
+  header{position:relative;background:var(--ink);color:#EAF0ED;overflow:hidden}
+  .ridge{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .hwrap{position:relative;z-index:2;max-width:1340px;margin:0 auto;padding:26px 26px 30px}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);margin:0 0 8px}
+  h1{font-family:var(--disp);font-weight:800;font-size:clamp(26px,4vw,42px);line-height:1.02;margin:0;letter-spacing:-.01em}
+  .sub{margin:10px 0 0;color:#B9C9C4;max-width:64ch;font-size:14.5px}
+  .pill{position:absolute;top:26px;right:26px;z-index:3;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 15px;backdrop-filter:blur(6px)}
+  .pill .dot{width:9px;height:9px;border-radius:50%}.pill .txt{font-family:var(--mono);font-size:12.5px}
+  /* summary strip */
+  .summary{position:relative;z-index:2;max-width:1340px;margin:0 auto;padding:0 26px 30px;display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+  @media(max-width:900px){.summary{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.summary{grid-template-columns:repeat(2,1fr)}}
+  .scard{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:13px;padding:13px 14px;backdrop-filter:blur(4px)}
+  .scard .l{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#9DB6AF;margin:0 0 7px}
+  .scard .n{font-family:var(--mono);font-weight:600;font-size:20px;color:#fff;line-height:1}
+  .scard .f{font-size:10px;color:#86a39b;margin-top:5px}
+  /* toolbar */
+  .toolbar{max-width:1340px;margin:0 auto;padding:16px 26px 0;display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+  .tbtn{font-family:var(--ui);font-size:12.5px;font-weight:500;color:var(--ink);background:var(--paper);border:1px solid var(--hair);
+    border-radius:9px;padding:9px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s;box-shadow:0 1px 2px rgba(14,42,43,.05)}
+  .tbtn:hover{border-color:var(--amber);color:var(--amber-d)}
+  .tbtn.prime{background:var(--ink);color:#fff;border-color:var(--ink)}.tbtn.prime:hover{background:#16403B;color:#fff}
+  .tbtn svg{width:15px;height:15px;stroke-width:1.8}
+  .saveState{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;display:flex;align-items:center;gap:6px}
+  .saveState .sdot{width:8px;height:8px;border-radius:50%;background:var(--pass)}
+  /* shell */
+  .shell{max-width:1340px;margin:18px auto 0;padding:0 26px 60px}
+  .grid{display:grid;grid-template-columns:330px 1fr;gap:22px;align-items:start}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--paper);border:1px solid var(--hair);border-radius:16px;box-shadow:0 1px 2px rgba(14,42,43,.04),0 10px 30px -24px rgba(14,42,43,.45)}
+  .pad{padding:20px}
+  .label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .src{font-family:var(--mono);font-size:9.5px;letter-spacing:.03em;color:#9aa8a3}
+  .sec-h{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 14px;gap:12px}
+  .sec-h h3{font-family:var(--disp);font-weight:600;font-size:18px;margin:0}.sec-h .label{margin:0}
+  .mb{margin-bottom:20px}
+  /* inputs rail */
+  .rail{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto}
+  .rail h2{font-family:var(--disp);font-weight:600;font-size:19px;margin:0 0 2px}
+  .rail .hint{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+  .igroup{margin:0 0 6px}
+  .igroup>summary{cursor:pointer;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--forest);list-style:none;padding:9px 0;border-top:1px solid var(--hair)}
+  .igroup>summary::-webkit-details-marker{display:none}
+  .igroup>summary:before{content:'▸ ';color:var(--amber)}.igroup[open]>summary:before{content:'▾ '}
+  .ctrl{margin:4px 0 14px}
+  .srow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .srow .lab{font-size:12.5px;display:flex;align-items:center;gap:5px}
+  .srow .v{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--forest)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:var(--hair);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--amber);border:3px solid #fff;box-shadow:0 2px 5px rgba(14,42,43,.3);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--amber);border:3px solid #fff;cursor:pointer}
+  input[type=range]:focus-visible{outline:2px solid var(--amber);outline-offset:4px}
+  .info{width:14px;height:14px;border-radius:50%;background:var(--mist);color:var(--muted);font-size:9px;font-weight:700;
+    display:inline-grid;place-items:center;cursor:help;flex:0 0 auto;border:1px solid var(--hair)}
+  /* KPI cards */
+  .kpis{display:grid;gap:13px}
+  .kc4{grid-template-columns:repeat(4,1fr)}.kc3{grid-template-columns:repeat(3,1fr)}.kc2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:760px){.kc4,.kc3{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--paper);border:1px solid var(--hair);border-radius:13px;padding:14px;position:relative}
+  .kpi.dark{background:var(--ink);border-color:var(--ink)}
+  .kpi .label{display:block;margin-bottom:8px}.kpi.dark .label{color:#8fb0a8}
+  .kpi .num{font-family:var(--mono);font-weight:600;font-size:23px;letter-spacing:-.02em;color:var(--ink);line-height:1}
+  .kpi.dark .num{color:#fff}
+  .kpi .foot{font-size:10.5px;color:var(--muted);margin-top:6px}.kpi.dark .foot{color:#7fa097}
+  /* tables */
+  .tbl{width:100%;border-collapse:collapse;font-size:13px}
+  .tbl th,.tbl td{padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left}
+  .tbl th{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .tbl td.n,.tbl th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+  .tbl tr.tot td{font-weight:700;border-top:1.5px solid var(--ink);border-bottom:none}
+  .tbl tr.sub td{color:var(--muted)}
+  .tbl .neg{color:var(--fail)}
+  .pl td{font-size:13.5px}
+  /* accordion sections */
+  .acc{border:1px solid var(--hair);border-radius:13px;overflow:hidden;margin-bottom:11px;background:var(--paper)}
+  .acc>summary{cursor:pointer;list-style:none;padding:15px 18px;display:flex;align-items:center;gap:12px;font-weight:600;font-size:15px}
+  .acc>summary::-webkit-details-marker{display:none}
+  .acc>summary .ico{width:30px;height:30px;border-radius:8px;background:var(--mist);display:grid;place-items:center;font-size:15px;flex:0 0 auto}
+  .acc>summary .cv{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .acc>summary:after{content:'+';font-family:var(--mono);color:var(--amber);font-size:18px;margin-left:8px}
+  .acc[open]>summary:after{content:'–'}
+  .acc[open]>summary{border-bottom:1px solid var(--hair)}
+  .acc .body{padding:6px 18px 18px}
+  .chip{font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap}
+  .chip.SLA{background:#EAF1FB;color:#2E5496}.chip.SLU{background:#F3E9FB;color:#7A3FA0}
+  .chip.SelfOp,.chip.Self-Op{background:var(--pass-bg);color:var(--pass)}.chip.TBD{background:var(--mist);color:var(--muted)}
+  .chip.pass{background:var(--pass-bg);color:var(--pass)}.chip.fail{background:var(--fail-bg);color:var(--fail)}.chip.warn{background:var(--warn-bg);color:var(--warn)}
+  /* charts */
+  .chartbox{height:240px;position:relative}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:760px){.two{grid-template-columns:1fr}}
+  .stack{height:14px;border-radius:7px;overflow:hidden;display:flex;margin:10px 0 6px;background:var(--mist)}
+  .stack i{display:block;height:100%}.stack .d{background:linear-gradient(var(--amber),var(--amber-d))}
+  .stack .e{background:linear-gradient(var(--forest2),var(--forest))}.stack .c{background:linear-gradient(#7FA89F,#5C8378)}
+  .stack-lbl{display:flex;gap:14px;font-size:11px;font-family:var(--mono);color:var(--muted);flex-wrap:wrap}
+  .stack-lbl b{color:var(--text)}
+  /* banner */
+  .banner{display:flex;align-items:center;gap:15px;border-radius:15px;padding:16px 20px;margin:0 0 20px;border:1px solid}
+  .banner .mark{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto}.banner .mark svg{width:21px;height:21px}
+  .banner h3{font-family:var(--disp);font-weight:600;font-size:19px;margin:0}.banner p{margin:3px 0 0;font-size:12.5px}
+  .banner.ok{background:var(--pass-bg);border-color:#bcdccb;color:#1c5a3f}.banner.ok .mark{background:var(--pass);color:#fff}
+  .banner.no{background:var(--fail-bg);border-color:#e6c3b8;color:#8d3320}.banner.no .mark{background:var(--fail);color:#fff}
+  /* AI */
+  .ai{background:linear-gradient(160deg,#103330,#0E2A2B);color:#E7EFEC;border:1px solid #234e47}
+  .ai .sec-h h3{color:#fff}.ai .label{color:var(--amber)}
+  .ai .blurb{color:#A8BFB9;font-size:13px;margin:0 0 14px;max-width:64ch}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:13px}
+  .chips button{font-family:var(--ui);font-size:12.5px;color:#DCEAE5;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 13px;cursor:pointer;transition:.15s}
+  .chips button:hover{background:var(--amber);color:var(--ink);border-color:var(--amber)}
+  .askrow{display:flex;gap:10px;align-items:flex-end}
+  .askrow textarea{flex:1;resize:vertical;min-height:46px;max-height:170px;font-family:var(--ui);font-size:14px;border-radius:11px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);color:#fff;padding:12px 14px}
+  .askrow textarea::placeholder{color:#8AA39D}.askrow textarea:focus{outline:2px solid var(--amber);border-color:transparent}
+  .ask{font-family:var(--ui);font-weight:600;font-size:14px;background:var(--amber);color:var(--ink);border:0;border-radius:11px;padding:13px 20px;cursor:pointer;white-space:nowrap;transition:.15s}
+  .ask:hover{background:#E8A954}.ask:disabled{opacity:.55;cursor:default}
+  .answer{margin-top:15px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;display:none}
+  .answer.show{display:block}
+  .answer .ahead{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.1);font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:flex;justify-content:space-between}
+  .answer .abody{padding:16px;font-size:14.5px;color:#EAF2EF}
+  .answer .abody h4{font-family:var(--disp);font-size:16px;margin:13px 0 6px;color:#fff}.answer .abody h4:first-child{margin-top:0}
+  .answer .abody p{margin:0 0 10px}.answer .abody ul{margin:0 0 10px;padding-left:20px}.answer .abody li{margin:3px 0}.answer .abody strong{color:#fff}
+  .dots span{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:var(--amber);animation:bln 1s infinite}
+  .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+  @keyframes bln{0%,80%,100%{opacity:.25}40%{opacity:1}}
+  /* tooltip */
+  #tip{position:fixed;z-index:9999;max-width:300px;background:var(--ink);color:#EAF0ED;font-size:12.5px;line-height:1.45;
+    padding:10px 13px;border-radius:9px;box-shadow:0 10px 30px -8px rgba(0,0,0,.5);pointer-events:none;opacity:0;transition:opacity .12s;border:1px solid #2c5750}
+  #tip.show{opacity:1}
+  #tip b{color:var(--amber)}
+  [data-tip]{cursor:help}
+  /* modal */
+  .modal{position:fixed;inset:0;z-index:9000;background:rgba(14,42,43,.55);display:none;align-items:center;justify-content:center;padding:20px}
+  .modal.show{display:flex}
+  .modal .box{background:var(--paper);border-radius:16px;max-width:520px;width:100%;padding:24px;box-shadow:0 30px 80px -20px rgba(0,0,0,.5)}
+  .modal h3{font-family:var(--disp);font-size:20px;margin:0 0 6px}
+  .modal p{font-size:13.5px;color:var(--muted);margin:0 0 16px}
+  .modal input[type=text]{width:100%;font-family:var(--mono);font-size:13px;padding:11px 13px;border:1px solid var(--hair);border-radius:9px;margin-bottom:14px}
+  .modal .row{display:flex;gap:10px;justify-content:flex-end}
+  .mnote{font-size:11.5px;color:var(--muted);margin-top:8px}
+  footer{max-width:1340px;margin:0 auto;padding:6px 26px 50px;color:var(--muted);font-size:11.5px}footer b{color:var(--text)}
+  @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition:none!important}}
+  @media print{.toolbar,.rail,.ai,header .pill,.ridge{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<header>
+  <svg class="ridge" viewBox="0 0 1440 360" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0E2A2B"/><stop offset="1" stop-color="#11342F"/></linearGradient>
+      <radialGradient id="sun" cx="82%" cy="26%" r="20%"><stop offset="0" stop-color="#E8B25C" stop-opacity=".45"/><stop offset="1" stop-color="#E8B25C" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="1440" height="360" fill="url(#sky)"/><rect width="1440" height="360" fill="url(#sun)"/>
+    <circle cx="1180" cy="92" r="28" fill="#E8B25C" opacity=".8"/>
+    <path d="M0,250 L210,168 L360,220 L560,140 L760,210 L980,128 L1180,200 L1440,150 L1440,360 L0,360Z" fill="#16403B" opacity=".5"/>
+    <path d="M0,290 L240,228 L470,272 L690,206 L900,262 L1140,214 L1440,272 L1440,360 L0,360Z" fill="#0C2422" opacity=".9"/>
+  </svg>
+  <div class="pill" id="pill"><span class="dot"></span><span class="txt">—</span></div>
+  <div class="hwrap">
+    <p class="eyebrow">Project Finance Model v6.1 · 2027–2075</p>
+    <h1>Thandiani 400 Kanal Resort</h1>
+    <p class="sub">A visual, editable analysis of the resort model. Open any section for detail, change the blue inputs to test the project, then export an updated workbook or report.</p>
+  </div>
+  <div class="summary" id="summary"></div>
+</header>
+
+<div class="toolbar" id="toolbar">
+  <button class="tbtn prime" id="btnXlsx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="m9 15 3-3 3 3M12 12v6" transform="rotate(180 12 14)"/></svg>Download .xlsx</button>
+  <button class="tbtn" id="btnReport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h4"/></svg>Generate report</button>
+  <button class="tbtn" id="btnGsheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Connect Google Sheet</button>
+  <button class="tbtn" id="btnExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Export scenario</button>
+  <button class="tbtn" id="btnImport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15V3m0 0 4 4m-4-4-4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import</button>
+  <button class="tbtn" id="btnReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Reset</button>
+  <input type="file" id="fileImport" accept="application/json" style="display:none">
+  <span class="saveState" id="saveState"><span class="sdot"></span>Saved</span>
+</div>
+
+<div class="shell">
+  <div class="grid">
+    <aside class="card pad rail">
+      <h2>Inputs</h2>
+      <p class="hint">Blue values are editable. Outputs update live. Hover the ⓘ for what each one does.</p>
+      <div id="inputs"></div>
+    </aside>
+    <main>
+      <div class="banner ok" id="banner"><div class="mark" id="bmark"></div><div><h3 id="btitle">—</h3><p id="brule">—</p></div></div>
+
+      <div class="card pad mb">
+        <div class="sec-h"><h3>Returns &amp; feasibility</h3><span class="label" id="retSrc">Workbook v6.1 certified</span></div>
+        <div class="kpis kc4" id="kpiRet"></div>
+      </div>
+
+      <div class="two mb">
+        <div class="card pad">
+          <div class="sec-h"><h3>Cost of capital</h3><span class="label">live</span></div>
+          <div class="kpis kc3" id="kpiCoc"></div>
+          <table class="tbl" id="tWacc" style="margin-top:12px" data-tip="<b>WACC build.</b> Cost of equity from CAPM (risk-free + re-levered beta × equity risk premium); after-tax cost of debt; blended by the funding weights. The risk-free rate carries Pakistan country risk."></table>
+        </div>
+        <div class="card pad">
+          <div class="sec-h"><h3>Capital structure</h3><span class="label">live</span></div>
+          <div class="kpis kc3" id="kpiCap"></div>
+          <div class="stack" data-tip="<b>Funding mix.</b> Debt from banks/DFIs, external investor equity, and internal cashflows recycled from early-phase operations. Internal funding is why external equity is small and returns are high."><i class="d" id="barD"></i><i class="e" id="barE"></i><i class="c" id="barC"></i></div>
+          <div class="stack-lbl"><span>● Debt <b id="lD">—</b></span><span>● Equity <b id="lE">—</b></span><span>● Internal <b id="lC">—</b></span></div>
+        </div>
+      </div>
+
+      <div class="card pad mb">
+        <div class="sec-h"><h3>Lifetime profit &amp; loss</h3><span class="label">live · engine</span></div>
+        <table class="pl tbl" id="tPL" data-tip="<b>Lifetime P&amp;L (2027–2075).</b> Built from stabilised revenue, the occupancy ramp and revenue inflation, with operating costs as a % of revenue. The base case reproduces the workbook's PKR 294 bn revenue / 167 bn EBITDA / 103 bn net profit."></table>
+      </div>
+
+      <div class="two mb">
+        <div class="card pad"><div class="sec-h"><h3>Revenue &amp; EBITDA</h3><span class="label">PKR bn / yr</span></div><div class="chartbox"><canvas id="chRev"></canvas></div></div>
+        <div class="card pad"><div class="sec-h"><h3>Coverage &amp; exit</h3><span class="label">live + certified</span></div><div class="kpis kc2" id="kpiCov"></div>
+          <table class="tbl" id="tExit" style="margin-top:12px" data-tip="<b>Investor exit.</b> Phase A and B investors exit at a 10× EBITDA multiple after a lock-in, producing these IRRs in the workbook."></table>
+        </div>
+      </div>
+
+      <div class="card pad mb">
+        <div class="sec-h"><h3>Project detail</h3><span class="label">tap to open · hover tables for notes</span></div>
+        <div id="sections"></div>
+      </div>
+
+      <div class="card pad ai">
+        <div class="sec-h"><h3>AI analyst</h3><span class="label">live scenario aware</span></div>
+        <p class="blurb">Grounded in the numbers on screen and the project's task list. Ask anything, or pick a prompt.</p>
+        <div class="chips" id="chips">
+          <button>Give an investor-ready verdict</button>
+          <button>Why is the LLCR failing and how to fix it?</button>
+          <button>Explain the funding structure simply</button>
+          <button>What changes if I raise gearing to 40%?</button>
+          <button>Draft a teaser paragraph for the client</button>
+        </div>
+        <div class="askrow"><textarea id="q" placeholder="Ask about returns, risks, financing, the task list…"></textarea><button class="ask" id="ask">Ask</button></div>
+        <div class="answer" id="answer"><div class="ahead"><span>Analyst</span><span id="aModel"></span></div><div class="abody" id="abody"></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+<footer id="foot"></footer>
+
+<div id="tip"></div>
+<div class="modal" id="modalG"><div class="box">
+  <h3>Connect a Google Sheet</h3>
+  <p>Paste a link to a Google Sheet (shared as “anyone with the link”). It pulls a two-column tab — <b>input key</b> and <b>value</b> — and applies any matching inputs.</p>
+  <input type="text" id="gUrl" placeholder="https://docs.google.com/spreadsheets/d/…">
+  <div class="row"><button class="tbtn" id="gCancel">Cancel</button><button class="tbtn prime" id="gPull">Pull data</button></div>
+  <p class="mnote" id="gMsg"></p>
+</div></div>
+
+<script>
+/* ===================== DATA (from Project Overview PDF + workbook v6.1) ===================== */
+var DATA={
+ cost:11380543174,
+ overview:[['Project name','Thandiani 400 Kanal Resort'],['Location','Thandiani, Pakistan'],['Type','Mixed-use luxury resort'],
+   ['Model horizon','2027 – 2075 (48 years)'],['Phases','3 (Phase C currently unfunded)'],['Status','Draft project-finance model'],['Total project cost','PKR 11.38 billion']],
+ land:[['Total site area','400 Kanal · 1,800,000 sqft'],['Green cover + infra reserve','45% → 180 Kanal'],['Constructible land','220 Kanal'],
+   ['Total developed area','338.85 Kanal · 1,524,816 sqft'],['Land used by built assets','204.5 Kanal'],['Remaining headroom','15.5 Kanal ✓ fits'],
+   ['Land standard','4,500 sqft / Kanal'],['Ground coverage ratio','55%']],
+ timeline:[['Phase A','Jan 2027 – Dec 2029','3 years','2030'],['Phase B','Jan 2030 – Dec 2031','2 years','2032'],['Phase C','Jan 2032 – Dec 2034 (planned)','3 years','Not yet funded']],
+ phaseA:[['Thematic Hotel – 1','Hotel','54,000','~98 rooms','3.3','SLA'],['Apartment Building – 1','Apartments','48,000','18 apts','3.6','SLA'],
+   ['Apartment Building – 2','Apartments','48,000','18 apts','3.6','Self-Op'],['Villas (mountain-side)','Villas','120,000','15 villas','1.1','SLA'],
+   ['Cottages','Cottages','95,000','~60 cottages','1.8','SLA'],['Corporate & Training Hub','Office','18,000','—','2.7','Self-Op'],
+   ['Wellness Facilities','Wellness','25,000','50 pax/day','2.7','SLA'],['Parks / Visitor Entrance','Central hearth','27,000','250 pax/day','1.8','Self-Op'],
+   ['Retail & Boutique','Retail','27,000','—','2.7','SLU'],['Restaurants','F&B','27,000','250 covers/day','2.7','SLA'],['Banquet Hall','Events','36,000','150 cap','1.8','SLU']],
+ phaseB:[['5-Star Hotel – 1','Hotel','90,000','150 rooms','3.6','SLA'],['Thematic Hotel – 2','Hotel','17,000','30 rooms','3.3','Self-Op'],
+   ['Apartment Building – 3','Apartments','48,000','18 apts','3.6','Self-Op'],['Apartment Building – 4','Apartments','48,000','18 apts','3.6','SLA'],
+   ['Apartment Building – 5','Apartments','48,000','18 apts','3.6','SLA'],['Apartment Building – 6','Apartments','48,000','18 apts','3.6','SLA'],
+   ['Villas (mountain-side)','Villas','120,000','15 villas','1.1','SLA'],['Wellness Space','Wellness','20,000','50 pax/day','2.7','SLA'],
+   ['Retail Spaces','Retail','27,000','—','2.7','SLU'],['Restaurants','F&B','27,000','250 covers/day','2.7','SLA'],['Indoor Sports Center','Sports','20,000','250 pax/day','1.8','SLA']],
+ phaseC:[['Apartment Buildings 7–10','Apartments','4 × 18 = 72 apts','Planned'],['Villas','Villas','Additional mountain-side','Planned'],['Retail Spaces','Retail','—','Planned'],['Indoor Sports Center','Sports','—','Planned']],
+ summary:[['Hotels','3 hotels — ~278 rooms (1 five-star 150 + 2 thematic ~128)'],['Apartments','6 buildings — 144 apartments'],['Villas','30 mountain-side villas (~8,000 sqft each)'],
+   ['Cottages','60 cottages'],['Wellness centres','2 (Phase A + B)'],['Restaurants','2 (Phase A + B)'],['Retail zones','2 (Phase A + B)'],['Banquet / events','1 banquet hall'],
+   ['Indoor sports','1 centre'],['Parks','1 visitor park'],['Corporate hub','1 training & co-working hub'],['Total constructed area','1,260,500 sqft across 280 Kanal'],['Built-up (excl. mgmt.)','~1,038,000 sqft across 231 Kanal']],
+ rates:[['Thematic Hotel rooms','75,000','50,000'],['5-Star Hotel rooms','85,000','65,000'],['Apartments (per night)','65,000–75,000','45,000–55,000'],
+   ['Villas (per night)','120,000–150,000','85,000–105,000'],['Cottages (per night)','95,000','75,000'],['Wellness (per person)','8,000','—'],
+   ['Restaurant (avg spend)','5,000','—'],['Retail SLA (sub-lease)','40,000–50,000 /sqft','—'],['Retail SLU (sub-lease)','50,000–65,000 /sqft','—']],
+ costRows:[['Construction — Phase A',3360200000],['Construction — Phase B',2656008014],['Development — Phase A',2065120756],['Development — Phase B',1625888882],
+   ['Interest during construction (IDC)',1534305522],['Vehicles',39020000],['Initial working capital',100000000],['Total project cost',11380543174]],
+ funding:[['Debt (Bank / DFI)',2276108635,0.20],['Equity (external investors)',3556986775,0.31],['Internal cashflows (self-funded)',5547447764,0.49]],
+ fundPhase:[['Phase A','1,795,714,775','2,276,108,635','2,458,725,461','6,530,548,871'],['Phase B','1,761,271,999','NIL','3,088,722,303','4,849,994,302'],['Phase C','NIL','NIL','NIL','NIL (unfunded)']],
+ terms:'KIBOR 11.15% + spread 3.0% = 14.15% · 10-year tenure · 2-year grace · Debt:Equity 19:81',
+ metrics:[['Total revenue (lifetime)','PKR 294 bn'],['Total EBITDA (lifetime)','PKR 167 bn (56.8%)'],['Net profit (lifetime)','PKR 103 bn (35.0%)'],
+   ['Annual stabilised revenue','PKR 1.8–2.0 bn (Year 9+)'],['Project IRR','49.7%'],['Equity IRR','135%'],['Equity NPV','PKR 5.32 bn'],['WACC','14.83%'],
+   ['Cost of equity','16.38%'],['Payback','1 year (from operations)'],['MOIC (full project)','12.36×'],['Phase A investor exit IRR','37.8% (8-yr lock, 10× EBITDA)'],
+   ['Phase B investor exit IRR','35.9% (7-yr lock, 10× EBITDA)'],['Average DSCR','4.03 ✓ (floor 1.6)'],['PLCR','4.88 ✓ (floor 2.5)'],['Min LLCR','0.69 ✗ (floor 1.6)'],['Stabilisation year','Year 9']],
+ assumptions:[['Revenue inflation','5.6% / yr'],['Capex inflation (local)','4.9% / yr'],['Capex inflation (foreign)','2.0% / yr'],['HR & operating cost inflation','4.9% / yr'],
+   ['Corporate tax','29%'],['Super tax (profit > 500 m)','8% additional'],['Effective tax (large profit)','~37%'],['Alternate corporate tax','1.7%'],['Minimum tax','1.25%'],
+   ['Authority revenue share','5% (from Year 4)'],['Annual lease — operations','PKR 198 m / yr'],['Annual lease — construction','PKR 100 m / yr'],
+   ['Depreciation — buildings & landscape','50 yrs straight-line'],['Depreciation — vehicles','5 yrs'],['Accounts receivable','15 days'],['Accounts payable','30 days']]
+};
+var CERT={projIRR:0.497,eqIRR:1.35,eqNPV:5320000000,moic:12.36,payback:'1 yr',exitA:0.378,exitB:0.359,dscr:4.03,plcr:4.88,llcr:0.69};
+
+/* ===================== INPUT CONFIG ===================== */
+var ICFG=[
+ {g:'Funding & capital structure',items:[
+   {id:'debtW',label:'Debt (gearing)',min:0,max:60,step:1,def:20,unit:'%',tip:'Share of total cost funded by bank/DFI debt. Workbook base = 20%. Raising it lifts WACC weighting toward cheaper after-tax debt but adds debt service.'},
+   {id:'internalW',label:'Internal cashflow funding',min:0,max:70,step:1,def:49,unit:'%',tip:'Share funded by cashflows recycled from early-phase operations. This is why external equity is small (~31%) and equity returns are very high.'}]},
+ {g:'Cost of capital',items:[
+   {id:'rfr',label:'Risk-free rate (PKR)',min:8,max:18,step:0.1,def:12.006,unit:'%',tip:'Pakistan risk-free rate. Already embeds country risk — high PKR rates substitute for an explicit country-risk premium.'},
+   {id:'erp',label:'Equity risk premium',min:3,max:9,step:0.25,def:5,unit:'%',tip:'Extra return equity investors demand over the risk-free rate.'},
+   {id:'betaU',label:'Unlevered beta',min:0.5,max:1.2,step:0.01,def:0.78,unit:'',tip:'Business risk vs the market before leverage. Re-levered using the debt weight to get cost of equity.'},
+   {id:'kibor',label:'KIBOR',min:6,max:18,step:0.05,def:11.15,unit:'%',tip:'Benchmark lending rate. Loan rate = KIBOR + spread.'},
+   {id:'spread',label:'Lending spread',min:1,max:6,step:0.25,def:3,unit:'%',tip:'Margin the lender adds over KIBOR.'}]},
+ {g:'Operating assumptions',items:[
+   {id:'occ',label:'Stabilised occupancy',min:60,max:100,step:1,def:90,unit:'%',tip:'Steady-state utilisation reached by Year 5. Revenue ramps 60% → this level over the first five operating years.'},
+   {id:'infl',label:'Revenue inflation',min:0,max:12,step:0.1,def:5.6,unit:'%',tip:'Annual escalation of room and service rates. Compounds across the 48-year horizon, so small changes move lifetime revenue a lot.'},
+   {id:'costRatio',label:'Operating cost',min:30,max:70,step:0.5,def:43.2,unit:'%',tip:'Cost of services + operating expenses as a % of revenue. Base 43.2% gives the workbook EBITDA margin of 56.8%.'},
+   {id:'revFactor',label:'Revenue scaler',min:60,max:140,step:1,def:100,unit:'%',tip:'Stress the whole revenue line up or down without touching the rate cards.'}]},
+ {g:'Tax & exit',items:[
+   {id:'corp',label:'Corporate tax',min:0,max:40,step:1,def:29,unit:'%',tip:'Base corporate income tax rate.'},
+   {id:'supertax',label:'Super tax (large profit)',min:0,max:15,step:0.5,def:8,unit:'%',tip:'Additional tax on annual profit above PKR 500 m. Effective rate on big profits ≈ 37%.'},
+   {id:'exitMult',label:'Exit EBITDA multiple',min:4,max:16,step:0.5,def:10,unit:'×',tip:'Multiple applied to EBITDA at investor exit. The workbook uses 10×.'},
+   {id:'endYear',label:'Model horizon ends',min:2050,max:2090,step:1,def:2075,unit:'',tip:'Final operating year. A longer hold adds more (inflated) cashflows to the lifetime totals.'}]}
+];
+var DEFAULTS={}; ICFG.forEach(function(g){g.items.forEach(function(it){DEFAULTS[it.id]=it.def;});});
+var PCT_KEYS={debtW:1,internalW:1,rfr:1,erp:1,kibor:1,spread:1,occ:1,infl:1,costRatio:1,revFactor:1,corp:1,supertax:1};
+var S=Object.assign({},DEFAULTS);
+
+/* ===================== formatting ===================== */
+function pct(x,d){return isFinite(x)?(x*100).toFixed(d==null?1:d)+'%':'—';}
+function bn(x){return isFinite(x)?(x<0?'-':'')+'PKR '+Math.abs(x/1e9).toFixed(2)+' bn':'—';}
+function bn1(x){return isFinite(x)?(x<0?'-':'')+Math.abs(x/1e9).toFixed(1)+' bn':'—';}
+function mult(x){return x.toFixed(2)+'×';}
+function comma(x){return Math.round(x).toLocaleString('en-US');}
+function v(id){return PCT_KEYS[id]?S[id]/100:S[id];}
+
+/* ===================== ENGINE ===================== */
+var DEPTOT=3164017088;
+function occAt(k,stab){return k>=5?stab:(0.6+(k-1)*(stab-0.6)/4);}
+function calibrateBase(){var denom=0,stab=0.9,infl=0.056;for(var y=2030;y<=2075;y++){var k=y-2030+1;denom+=occAt(k,stab)*Math.pow(1+infl,k-1);}return 294195853955.23/denom;}
+var BASEREV=calibrateBase();
+function coc(){
+  var debtW=v('debtW'),eqW=1-debtW;
+  var rel=v('betaU')*(1+(1-0.39)*debtW);
+  var Ke=v('rfr')+rel*v('erp');
+  var Kd=(v('kibor')+v('spread'))*(1-0.39);
+  var WACC=Ke*eqW+Kd*debtW;
+  return {rel:rel,Ke:Ke,Kd:Kd,WACC:WACC,loanRate:v('kibor')+v('spread')};
+}
+function capital(){
+  var c=DATA.cost,dW=v('debtW'),iW=v('internalW'),eW=Math.max(0,1-dW-iW);
+  return {debt:c*dW,internal:c*iW,equity:c*eW,dW:dW,iW:iW,eW:eW};
+}
+function debtSchedule(){
+  var debt=DATA.cost*v('debtW'),rate=v('kibor')+v('spread'),grace=2,term=10,bal=debt,fin=0,svc=[];
+  var prinPerYr=debt/(term-grace);
+  for(var ln=1;ln<=term;ln++){var yr=2027+ln-1;var interest=bal*rate;var prin=(ln>grace)?prinPerYr:0;
+    if(yr>=2030)fin+=interest;svc.push({yr:yr,interest:interest,prin:prin});bal-=prin;}
+  return {fin:fin,svc:svc,annualSvc:debt>0?(debt/(term-grace)+debt*rate*0.5):0};
+}
+function pl(){
+  var infl=v('infl'),stab=v('occ'),cr=v('costRatio'),rf=v('revFactor'),corp=v('corp'),sup=v('supertax'),end=S.endYear;
+  var opsYears=end-2030+1,dep=DEPTOT/Math.max(1,opsYears),ds=debtSchedule();
+  var finByYr={};ds.svc.forEach(function(s){finByYr[s.yr]=s.interest;});
+  var rev=0,ebitdaT=0,netT=0,series=[],stabRev=0,stabEb=0;
+  for(var y=2027;y<=end;y++){
+    var r=0;if(y>=2030){var k=y-2030+1;r=BASEREV*rf*occAt(k,stab)*Math.pow(1+infl,k-1);}
+    var eb=r*(1-cr);var ebit=eb-(y>=2030?dep:0);
+    var fin=(y>=2030&&finByYr[y])?finByYr[y]:0;var ebt=ebit-fin;
+    var taxRate=corp+(ebt>500e6?sup:0);var tax=ebt>0?ebt*taxRate:0;var net=ebt-tax;
+    rev+=r;ebitdaT+=eb;netT+=net;series.push({y:y,rev:r,eb:eb,net:net});
+    if(y===2038){stabRev=r;stabEb=eb;}
+  }
+  return {rev:rev,ebitda:ebitdaT,net:netT,series:series,margin:ebitdaT/rev,netMargin:netT/rev,stabRev:stabRev,stabEb:stabEb,fin:ds.fin,dep:DEPTOT,annualSvc:ds.annualSvc};
+}
+
+/* ===================== render helpers ===================== */
+function tableHTML(head,rows,tip){
+  var h=head?'<tr>'+head.map(function(c,i){return '<th class="'+(i>0&&head.length<=3&&i===head.length-1?'n':(i>0?'':''))+'">'+c+'</th>';}).join('')+'</tr>':'';
+  var b=rows.map(function(r){return '<tr>'+r.map(function(c,i){var num=(typeof c==='number');return '<td class="'+(num?'n':'')+'">'+(num?comma(c):c)+'</td>';}).join('')+'</tr>';}).join('');
+  return '<table class="tbl"'+(tip?' data-tip="'+tip.replace(/"/g,'&quot;')+'"':'')+'>'+h+b+'</table>';
+}
+function modeChip(m){var cls=m.replace(/[^A-Za-z]/g,'');return '<span class="chip '+cls+'">'+m+'</span>';}
+
+var ICON_OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+var ICON_NO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.86 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>';
+
+/* ---- build inputs ---- */
+function buildInputs(){
+  var html='';
+  ICFG.forEach(function(g,gi){
+    html+='<details class="igroup"'+(gi<2?' open':'')+'><summary>'+g.g+'</summary>';
+    g.items.forEach(function(it){
+      html+='<div class="ctrl"><div class="srow"><span class="lab">'+it.label+
+        ' <span class="info" data-tip="<b>'+it.label+'.</b> '+it.tip.replace(/"/g,'&quot;')+'">i</span></span>'+
+        '<span class="v" id="v_'+it.id+'"></span></div>'+
+        '<input type="range" id="in_'+it.id+'" min="'+it.min+'" max="'+it.max+'" step="'+it.step+'" value="'+S[it.id]+'"></div>';
+    });
+    html+='</details>';
+  });
+  document.getElementById('inputs').innerHTML=html;
+  ICFG.forEach(function(g){g.items.forEach(function(it){
+    var el=document.getElementById('in_'+it.id);
+    el.addEventListener('input',function(){S[it.id]=parseFloat(el.value);syncInputLabels();render();scheduleSave();});
+  });});
+  syncInputLabels();
+}
+function syncInputLabels(){
+  ICFG.forEach(function(g){g.items.forEach(function(it){
+    var disp=PCT_KEYS[it.id]?(S[it.id].toFixed(it.step<1?(it.step<0.1?2:1):0)+'%'):(it.id==='endYear'?S[it.id]:S[it.id]+(it.unit||''));
+    var el=document.getElementById('v_'+it.id);if(el)el.textContent=disp;
+    var rng=document.getElementById('in_'+it.id);if(rng&&parseFloat(rng.value)!==S[it.id])rng.value=S[it.id];
+  });});
+}
+
+/* ---- build accordion sections ---- */
+function buildSections(){
+  var secs=[
+   ['📋','Project overview',DATA.overview.length, tableHTML(null,DATA.overview,'High-level facts about the development, its phasing and total cost.')],
+   ['⛰️','Land &amp; site',DATA.land.length, tableHTML(null,DATA.land,'How the 400 Kanal is allocated. 45% is reserved for green cover and infrastructure; built assets use 204.5 Kanal, leaving 15.5 Kanal of headroom.')],
+   ['🗓️','Construction timeline',DATA.timeline.length, tableHTML(['Phase','Construction','Duration','Ops start'],DATA.timeline,'Three build phases. Operations begin as each phase completes; Phase C is planned but unfunded.')],
+   ['🏨','Phase A assets',DATA.phaseA.length, tableHTML(['Asset','Type','Sqft','Units','Floors','Mode'],DATA.phaseA.map(function(r){return r.slice(0,5).concat([modeChip(r[5])]);}),'Operational from 2030. Mode shows whether each asset is self-operated, sub-leased (SLA) or sub-leased with an upfront premium (SLU).')],
+   ['🏔️','Phase B assets',DATA.phaseB.length, tableHTML(['Asset','Type','Sqft','Units','Floors','Mode'],DATA.phaseB.map(function(r){return r.slice(0,5).concat([modeChip(r[5])]);}),'Operational from 2032, anchored by the 150-room five-star hotel.')],
+   ['🧭','Phase C (planned)',DATA.phaseC.length, tableHTML(['Asset','Type','Detail','Status'],DATA.phaseC,'Additional apartments, villas, retail and sports — not yet funded, so excluded from the certified returns.')],
+   ['🗂️','Full asset summary',DATA.summary.length, tableHTML(null,DATA.summary,'Everything the completed resort contains across all phases.')],
+   ['💵','Room &amp; unit rates',DATA.rates.length, tableHTML(['Asset','Peak rate','Off-season'],DATA.rates,'Nightly room rates and service prices. Peak and off-season are 183 days each; occupancy ramps 60% → 90% over five years.')],
+   ['🏗️','Cost breakdown',DATA.costRows.length, tableHTML(['Item','PKR'],DATA.costRows,'Where the PKR 11.38 bn goes. Construction and development dominate; IDC is capitalised interest during construction.')],
+   ['🏦','Capital structure',DATA.funding.length, tableHTML(['Source','PKR','Share'],DATA.funding.map(function(r){return [r[0],comma(r[1]),pct(r[2])];}),'The three-way funding split: 20% debt, 31% external equity, 49% recycled internal cashflows.')+
+      tableHTML(['Phase','Equity','Debt','Internal','Total cost'],DATA.fundPhase,'How each phase is funded. Phase B needs no new debt — it is funded by Phase A operating cashflows.')+'<p class="src" style="margin-top:8px">'+DATA.terms+'</p>'],
+   ['📈','All financial metrics',DATA.metrics.length, tableHTML(null,DATA.metrics,'The full certified metric set from workbook v6.1, including coverage ratios and investor exit IRRs.')],
+   ['⚙️','Inflation, tax &amp; assumptions',DATA.assumptions.length, tableHTML(null,DATA.assumptions,'The escalation, tax and working-capital assumptions underpinning every projection.')]
+  ];
+  document.getElementById('sections').innerHTML=secs.map(function(s,i){
+    return '<details class="acc"'+(i===0?' open':'')+'><summary><span class="ico">'+s[0]+'</span>'+s[1]+'<span class="cv">'+s[2]+' rows</span></summary><div class="body">'+s[3]+'</div></details>';
+  }).join('');
+}
+
+/* ===================== main render ===================== */
+var chRev;
+function render(){
+  var C=coc(),CAP=capital(),P=pl();
+  // summary strip
+  document.getElementById('summary').innerHTML=[
+    ['Total project cost',bn1(DATA.cost),'fixed'],['Project IRR',pct(CERT.projIRR),'certified'],['Equity IRR',pct(CERT.eqIRR,0),'certified'],
+    ['Equity NPV',bn1(CERT.eqNPV),'certified'],['Lifetime revenue',bn1(P.rev),'live'],['Money multiple',mult(CERT.moic),'certified']
+  ].map(function(c){return '<div class="scard"><p class="l">'+c[0]+'</p><div class="n">'+c[1]+'</div><div class="f">'+c[2]+'</div></div>';}).join('');
+  // returns
+  document.getElementById('kpiRet').innerHTML=[
+    ['Project IRR',pct(CERT.projIRR),'vs WACC '+pct(C.WACC),1],['Equity IRR',pct(CERT.eqIRR,0),'vs Ke '+pct(C.Ke),0],
+    ['Equity NPV',bn(CERT.eqNPV),'at cost of equity',0],['Payback',CERT.payback,'from operations',0]
+  ].map(function(r){return '<div class="kpi'+(r[3]?' dark':'')+'"><span class="label">'+r[0]+'</span><div class="num">'+r[1]+'</div><div class="foot">'+r[2]+'</div></div>';}).join('');
+  // cost of capital
+  document.getElementById('kpiCoc').innerHTML=[
+    ['Cost of equity',pct(C.Ke,2),'CAPM'],['Cost of debt',pct(C.Kd,2),'after-tax'],['WACC',pct(C.WACC,2),'blended']
+  ].map(function(r,i){return '<div class="kpi'+(i===2?' dark':'')+'"><span class="label">'+r[0]+'</span><div class="num">'+r[1]+'</div><div class="foot">'+r[2]+'</div></div>';}).join('');
+  document.getElementById('tWacc').innerHTML=
+    [['Risk-free rate',pct(v('rfr'),2)],['Re-levered beta',C.rel.toFixed(3)],['Equity risk premium',pct(v('erp'),1)],['Loan rate',pct(C.loanRate,2)],['Debt / equity weight',pct(CAP.dW)+' / '+pct(1-CAP.dW)]]
+    .map(function(x){return '<tr><td>'+x[0]+'</td><td class="n">'+x[1]+'</td></tr>';}).join('');
+  // capital structure
+  document.getElementById('kpiCap').innerHTML=[
+    ['Debt',bn1(CAP.debt),pct(CAP.dW)],['Equity',bn1(CAP.equity),pct(CAP.eW)],['Internal',bn1(CAP.internal),pct(CAP.iW)]
+  ].map(function(r){return '<div class="kpi"><span class="label">'+r[0]+'</span><div class="num">'+r[1]+'</div><div class="foot">'+r[2]+' of cost</div></div>';}).join('');
+  document.getElementById('barD').style.width=(CAP.dW*100)+'%';document.getElementById('barE').style.width=(CAP.eW*100)+'%';document.getElementById('barC').style.width=(CAP.iW*100)+'%';
+  document.getElementById('lD').textContent=bn1(CAP.debt);document.getElementById('lE').textContent=bn1(CAP.equity);document.getElementById('lC').textContent=bn1(CAP.internal);
+  // P&L
+  var plRows=[['Revenue',P.rev,0],['Operating costs',-(P.rev-P.ebitda),1],['EBITDA',P.ebitda,2],['Depreciation',-P.dep,1],['Finance cost',-P.fin,1],
+    ['Profit before tax',P.ebitda-P.dep-P.fin,0],['Taxation',-(P.ebitda-P.dep-P.fin-P.net),1],['Net profit',P.net,2]];
+  document.getElementById('tPL').innerHTML=plRows.map(function(x){var cls=x[2]===2?'tot':(x[2]===1?'sub':'');var neg=x[1]<0?'neg':'';return '<tr class="'+cls+'"><td>'+x[0]+'</td><td class="n '+neg+'">'+bn(x[1])+'</td></tr>';}).join('')
+    +'<tr class="sub"><td>EBITDA margin</td><td class="n">'+pct(P.margin)+'</td></tr><tr class="sub"><td>Net margin</td><td class="n">'+pct(P.netMargin)+'</td></tr>';
+  // coverage + exit
+  var dscrLive=P.annualSvc>0?(P.stabEb/P.annualSvc):0;
+  document.getElementById('kpiCov').innerHTML=[
+    ['Avg DSCR',CERT.dscr.toFixed(2),'✓ vs 1.6 floor',true],['Min LLCR',CERT.llcr.toFixed(2),'✗ vs 1.6 floor',false]
+  ].map(function(r){return '<div class="kpi"><span class="label">'+r[0]+'</span><div class="num" style="color:'+(r[3]?'var(--pass)':'var(--fail)')+'">'+r[1]+'</div><div class="foot">'+r[2]+'</div></div>';}).join('');
+  document.getElementById('tExit').innerHTML=
+    [['Phase A investor exit IRR',pct(CERT.exitA)+' · 8-yr, '+S.exitMult+'×'],['Phase B investor exit IRR',pct(CERT.exitB)+' · 7-yr, '+S.exitMult+'×'],
+     ['PLCR',CERT.plcr.toFixed(2)+' ✓ (floor 2.5)'],['Stabilised annual revenue',bn(P.stabRev)+' (2038)']]
+    .map(function(x){return '<tr><td>'+x[0]+'</td><td class="n">'+x[1]+'</td></tr>';}).join('');
+  // chart
+  drawChart(P.series);
+  // banner (feasibility: certified Equity IRR vs live Ke)
+  var ok=CERT.eqIRR>=C.Ke;
+  var b=document.getElementById('banner');b.className='banner '+(ok?'ok':'no');
+  document.getElementById('bmark').innerHTML=ok?ICON_OK:ICON_NO;
+  document.getElementById('btitle').textContent=ok?'Feasible — equity return clears the hurdle':'Below hurdle — equity return under cost of equity';
+  document.getElementById('brule').textContent='Equity IRR '+pct(CERT.eqIRR,0)+' vs cost of equity '+pct(C.Ke,2)+'. LLCR 0.69 remains below its 1.6 floor — the one criterion not met.';
+  var pill=document.getElementById('pill');pill.querySelector('.dot').style.background=ok?'#7FD3A6':'#E59C86';pill.querySelector('.txt').textContent=ok?'FEASIBLE':'REVIEW';
+  document.getElementById('foot').innerHTML='<b>Source:</b> Thandiani 400 Kanal Resort — Project Finance Model v6.1 (June 2022). Returns, coverage ratios and exit IRRs are the workbook-certified outputs; the lifetime P&amp;L, cost of capital and capital structure recompute live from your inputs. All figures PKR. Draft — for discussion only, not investment advice.';
+}
+function drawChart(series){
+  var step= series.length>30?2:1, labels=[],rev=[],eb=[];
+  for(var i=0;i<series.length;i+=step){labels.push(series[i].y);rev.push(series[i].rev/1e9);eb.push(series[i].eb/1e9);}
+  if(!window.Chart)return;
+  if(chRev){chRev.data.labels=labels;chRev.data.datasets[0].data=rev;chRev.data.datasets[1].data=eb;chRev.update('none');return;}
+  chRev=new Chart(document.getElementById('chRev'),{type:'line',data:{labels:labels,datasets:[
+    {label:'Revenue',data:rev,borderColor:'#D9943B',backgroundColor:'rgba(217,148,59,.12)',fill:true,tension:.3,pointRadius:0,borderWidth:2},
+    {label:'EBITDA',data:eb,borderColor:'#1F564E',backgroundColor:'rgba(31,86,78,.12)',fill:true,tension:.3,pointRadius:0,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+     plugins:{legend:{position:'bottom',labels:{font:{family:"'Inter'",size:11},color:'#647570',usePointStyle:true,pointStyleWidth:8,boxHeight:6}},
+       tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+': PKR '+c.parsed.y.toFixed(2)+' bn';}}}},
+     scales:{x:{grid:{display:false},ticks:{font:{family:"'Spline Sans Mono'",size:9},color:'#9aa8a3',maxRotation:0,autoSkipPadding:18}},
+       y:{grid:{color:'rgba(14,42,43,.06)'},ticks:{font:{family:"'Spline Sans Mono'",size:9},color:'#9aa8a3',callback:function(val){return val+' bn';}}}}}});
+}
+
+/* ===================== tooltips ===================== */
+var tip=document.getElementById('tip');
+document.addEventListener('mouseover',function(e){var t=e.target.closest('[data-tip]');if(!t)return;tip.innerHTML=t.getAttribute('data-tip');tip.classList.add('show');});
+document.addEventListener('mousemove',function(e){if(!tip.classList.contains('show'))return;var x=e.clientX+14,y=e.clientY+16;var w=tip.offsetWidth,h=tip.offsetHeight;if(x+w>innerWidth-10)x=e.clientX-w-14;if(y+h>innerHeight-10)y=e.clientY-h-16;tip.style.left=x+'px';tip.style.top=y+'px';});
+document.addEventListener('mouseout',function(e){var t=e.target.closest('[data-tip]');if(t)tip.classList.remove('show');});
+
+/* ===================== persistence (cloud if available, else local) ===================== */
+var KEY='thandiani_dashboard_v1',saveT;
+function setSaved(txt,color){var s=document.getElementById('saveState');s.lastChild.textContent=' '+txt;s.querySelector('.sdot').style.background=color||'var(--pass)';}
+function scheduleSave(){setSaved('Saving…','#D9943B');clearTimeout(saveT);saveT=setTimeout(persist,500);}
+function persist(){
+  var payload=JSON.stringify(S);
+  if(window.storage&&window.storage.set){
+    window.storage.set(KEY,payload,false).then(function(){setSaved('Saved to cloud');}).catch(function(){try{localStorage.setItem(KEY,payload);setSaved('Saved locally');}catch(e){setSaved('Save failed','#C0492F');}});
+  } else {try{localStorage.setItem(KEY,payload);setSaved('Saved locally');}catch(e){setSaved('Save failed','#C0492F');}}
+}
+function loadState(cb){
+  if(window.storage&&window.storage.get){
+    window.storage.get(KEY).then(function(r){if(r&&r.value){try{Object.assign(S,JSON.parse(r.value));}catch(e){}}cb();}).catch(function(){localTry();cb();});
+  } else {localTry();cb();}
+  function localTry(){try{var v=localStorage.getItem(KEY);if(v)Object.assign(S,JSON.parse(v));}catch(e){}}
+}
+
+/* ===================== XLSX export ===================== */
+function exportXlsx(){
+  var C=coc(),CAP=capital(),P=pl();
+  var wb=XLSX.utils.book_new();
+  var inp=[['Thandiani 400 Kanal Resort — Scenario Inputs'],[]];
+  ICFG.forEach(function(g){inp.push([g.g]);g.items.forEach(function(it){inp.push([it.label,PCT_KEYS[it.id]?(S[it.id]/100):S[it.id],it.unit||'']);});inp.push([]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(inp),'Inputs');
+  var out=[['Outputs (live)'],[],['Cost of equity (Ke)',C.Ke],['Cost of debt (Kd)',C.Kd],['WACC',C.WACC],[],
+    ['Debt (PKR)',CAP.debt],['Equity (PKR)',CAP.equity],['Internal cashflows (PKR)',CAP.internal],[],
+    ['Lifetime revenue (PKR)',P.rev],['Lifetime EBITDA (PKR)',P.ebitda],['EBITDA margin',P.margin],['Lifetime net profit (PKR)',P.net],['Net margin',P.netMargin],
+    ['Finance cost (PKR)',P.fin],['Stabilised annual revenue 2038 (PKR)',P.stabRev],[],
+    ['— Certified (workbook v6.1) —'],['Project IRR',CERT.projIRR],['Equity IRR',CERT.eqIRR],['Equity NPV (PKR)',CERT.eqNPV],['MOIC',CERT.moic],
+    ['Avg DSCR',CERT.dscr],['PLCR',CERT.plcr],['Min LLCR',CERT.llcr],['Phase A exit IRR',CERT.exitA],['Phase B exit IRR',CERT.exitB]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(out),'Outputs');
+  var pl=[['Year','Revenue','EBITDA','Net profit']];P.series.forEach(function(s){pl.push([s.y,s.rev,s.eb,s.net]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pl),'Annual P&L');
+  var cap=[['Source','PKR','Share']];DATA.funding.forEach(function(r){cap.push([r[0],r[1],r[2]]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(cap),'Capital structure');
+  XLSX.writeFile(wb,'Thandiani_scenario.xlsx');
+}
+
+/* ===================== report ===================== */
+function buildReport(aiText){
+  var C=coc(),CAP=capital(),P=pl(),d=new Date().toLocaleDateString();
+  function row(k,val){return '<tr><td style="padding:6px 10px;border-bottom:1px solid #ddd">'+k+'</td><td style="padding:6px 10px;border-bottom:1px solid #ddd;text-align:right;font-family:monospace">'+val+'</td></tr>';}
+  var inputsRows='';ICFG.forEach(function(g){g.items.forEach(function(it){inputsRows+=row(it.label,(PCT_KEYS[it.id]?S[it.id]+'%':S[it.id]+(it.unit||'')));});});
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Thandiani Resort — Analysis Report</title>'+
+   '<style>body{font-family:Georgia,serif;max-width:820px;margin:30px auto;color:#16302E;line-height:1.55;padding:0 24px}'+
+   'h1{font-size:26px;border-bottom:3px solid #D9943B;padding-bottom:8px}h2{font-size:18px;color:#16403B;margin-top:28px}'+
+   'table{width:100%;border-collapse:collapse;font-size:14px;margin:10px 0}.muted{color:#647570;font-size:12px}'+
+   '.kp{display:inline-block;width:31%;margin:1%;background:#EAF0ED;border-radius:10px;padding:12px;text-align:center}'+
+   '.kp b{display:block;font-size:20px;font-family:monospace;color:#0E2A2B}.kp span{font-size:11px;color:#647570}</style></head><body>'+
+   '<h1>Thandiani 400 Kanal Resort — Analysis Report</h1><p class="muted">Generated '+d+' · Project Finance Model v6.1 · figures in PKR · draft for discussion.</p>'+
+   '<div><div class="kp"><b>'+pct(CERT.projIRR)+'</b><span>Project IRR</span></div><div class="kp"><b>'+pct(CERT.eqIRR,0)+'</b><span>Equity IRR</span></div>'+
+   '<div class="kp"><b>'+bn1(CERT.eqNPV)+'</b><span>Equity NPV</span></div><div class="kp"><b>'+bn1(P.rev)+'</b><span>Lifetime revenue</span></div>'+
+   '<div class="kp"><b>'+pct(C.WACC,2)+'</b><span>WACC</span></div><div class="kp"><b>'+mult(CERT.moic)+'</b><span>MOIC</span></div></div>'+
+   (aiText?'<h2>Analyst summary</h2><div>'+aiText.replace(/\n/g,'<br>')+'</div>':'')+
+   '<h2>Scenario inputs</h2><table>'+inputsRows+'</table>'+
+   '<h2>Cost of capital &amp; structure</h2><table>'+row('Cost of equity (Ke)',pct(C.Ke,2))+row('Cost of debt (Kd)',pct(C.Kd,2))+row('WACC',pct(C.WACC,2))+
+     row('Debt',bn(CAP.debt))+row('Equity',bn(CAP.equity))+row('Internal cashflows',bn(CAP.internal))+'</table>'+
+   '<h2>Lifetime profit &amp; loss</h2><table>'+row('Revenue',bn(P.rev))+row('EBITDA',bn(P.ebitda)+' ('+pct(P.margin)+')')+row('Net profit',bn(P.net)+' ('+pct(P.netMargin)+')')+'</table>'+
+   '<h2>Certified metrics (workbook v6.1)</h2><table>'+DATA.metrics.map(function(m){return row(m[0],m[1]);}).join('')+'</table>'+
+   '<p class="muted">Not investment advice.</p></body></html>';
+  return html;
+}
+function downloadReport(){
+  var html=buildReport(window._lastAI||'');var blob=new Blob([html],{type:'text/html'});var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='Thandiani_report.html';a.click();URL.revokeObjectURL(url);
+}
+
+/* ===================== Google Sheet pickup ===================== */
+function pullGSheet(url){
+  var m=url.match(/\/d\/([a-zA-Z0-9-_]+)/);if(!m){document.getElementById('gMsg').textContent='That does not look like a Google Sheet link.';return;}
+  var csvUrl='https://docs.google.com/spreadsheets/d/'+m[1]+'/gviz/tq?tqx=out:csv';
+  document.getElementById('gMsg').textContent='Fetching…';
+  fetch(csvUrl).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();}).then(function(csv){
+    var rows=csv.split(/\r?\n/).map(function(l){return l.split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();});});
+    var applied=0,map={};ICFG.forEach(function(g){g.items.forEach(function(it){map[it.id.toLowerCase()]=it.id;map[it.label.toLowerCase()]=it.id;});});
+    rows.forEach(function(r){if(r.length<2)return;var key=(r[0]||'').toLowerCase(),val=parseFloat((r[1]||'').replace(/[%,]/g,''));if(map[key]&&isFinite(val)){S[map[key]]=val;applied++;}});
+    document.getElementById('gMsg').textContent=applied?('Applied '+applied+' input'+(applied>1?'s':'')+'.'):'No matching input keys found (use the input names as the first column).';
+    if(applied){syncInputLabels();render();scheduleSave();}
+  }).catch(function(e){document.getElementById('gMsg').textContent='Could not read the sheet (make sure link sharing is on). '+e.message;});
+}
+
+/* ===================== AI (OpenRouter) ===================== */
+var OR_KEY='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';
+var OR_MODELS=['meta-llama/llama-3.3-70b-instruct:free','google/gemini-2.0-flash-exp:free','deepseek/deepseek-chat:free','mistralai/mistral-7b-instruct:free'];
+var TASKS='Project task list anchoring (for advice context): (1) Financial modelling — review/flip the business model into the agentic framework; study the Ring Road 80/20 bank funding split, inflated construction cost to cover equity, milestone instalments; deliver Excel feedback. (2) Town planning — test 400-kanal layout via FAR; build a 3D town model; offer it as a paid premium deliverable. (3) Strategic testing — run the fully-owned Lifetime-Value model to minimise sales/fundraising risk; assess feasibility on a country-risk-adjusted discounted IRR. (4) Contracts — draft the DAO consulting contract, a teaser & negotiation strategy, finalise the Above Zero contract. (5) Coordination — gather Above Zero website, fundraising (30 Crore pledge), app and Trustpilot data.';
+function ctxText(){
+  var C=coc(),CAP=capital(),P=pl();
+  return 'THANDIANI 400 KANAL RESORT — figures on screen now (PKR, model v6.1):\n'+
+   'INPUTS: gearing '+S.debtW+'% debt / internal '+S.internalW+'% / equity '+(100-S.debtW-S.internalW)+'%; RFR '+S.rfr+'%, ERP '+S.erp+'%, beta '+S.betaU+', KIBOR '+S.kibor+'% + '+S.spread+'% spread; occupancy '+S.occ+'%, revenue inflation '+S.infl+'%, operating cost '+S.costRatio+'% of revenue, revenue scaler '+S.revFactor+'%; corp tax '+S.corp+'% + super '+S.supertax+'%; exit '+S.exitMult+'×; horizon to '+S.endYear+'.\n'+
+   'COST OF CAPITAL (live): Ke '+pct(C.Ke,2)+', Kd '+pct(C.Kd,2)+', WACC '+pct(C.WACC,2)+'.\n'+
+   'CAPITAL STRUCTURE (live): Debt '+bn(CAP.debt)+', Equity '+bn(CAP.equity)+', Internal '+bn(CAP.internal)+'; total cost '+bn(DATA.cost)+'.\n'+
+   'LIFETIME P&L (live engine): Revenue '+bn(P.rev)+', EBITDA '+bn(P.ebitda)+' ('+pct(P.margin)+'), Net '+bn(P.net)+' ('+pct(P.netMargin)+'); finance cost '+bn(P.fin)+'; stabilised annual revenue ~'+bn(P.stabRev)+'.\n'+
+   'CERTIFIED (workbook v6.1): Project IRR '+pct(CERT.projIRR)+', Equity IRR '+pct(CERT.eqIRR,0)+', Equity NPV '+bn(CERT.eqNPV)+', MOIC '+mult(CERT.moic)+', Payback 1 yr; Avg DSCR '+CERT.dscr+' (floor 1.6), PLCR '+CERT.plcr+' (floor 2.5), Min LLCR '+CERT.llcr+' (floor 1.6 — NOT met); Phase A exit IRR '+pct(CERT.exitA)+', Phase B '+pct(CERT.exitB)+'.\n'+TASKS;
+}
+var SYSTEM='You are a senior project-finance analyst and advisor for the Thandiani 400 Kanal Resort. Use ONLY the numbers provided — never invent figures. Be concise, plain-English and decision-useful (under ~180 words unless asked for more). The fully-owned case captures lifetime value and minimises sales/fundraising risk; the discount rate already embeds Pakistan country risk via the ~12% PKR risk-free rate. When relevant, tie advice to the project task list. Use short paragraphs or bullets and bold the single most important takeaway.';
+function mdLite(t){t=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  var L=t.split(/\n/),h='',inL=false;for(var i=0;i<L.length;i++){var ln=L[i];
+   if(/^\s*[-*•]\s+/.test(ln)){if(!inL){h+='<ul>';inL=true;}h+='<li>'+ln.replace(/^\s*[-*•]\s+/,'')+'</li>';}
+   else{if(inL){h+='</ul>';inL=false;}if(/^#{1,3}\s+/.test(ln))h+='<h4>'+ln.replace(/^#{1,3}\s+/,'')+'</h4>';else if(ln.trim())h+='<p>'+ln+'</p>';}}
+  if(inL)h+='</ul>';return h;}
+var busy=false;
+function askAI(q){
+  if(busy)return;busy=true;var btn=document.getElementById('ask');btn.disabled=true;
+  var ans=document.getElementById('answer'),body=document.getElementById('abody');ans.classList.add('show');
+  body.innerHTML='<div class="dots"><span></span><span></span><span></span></div>';
+  var msgs=[{role:'system',content:SYSTEM},{role:'user',content:ctxText()+'\n\nQUESTION: '+q}];
+  var i=0;
+  function tryModel(){
+    if(i>=OR_MODELS.length){body.innerHTML='<p><strong>Could not reach the AI service.</strong></p><p>All free models were busy or rate-limited. Wait a moment and try again.</p>';busy=false;btn.disabled=false;return;}
+    var model=OR_MODELS[i++];document.getElementById('aModel').textContent=model.split('/').pop().replace(':free','');
+    fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+OR_KEY,'Content-Type':'application/json','HTTP-Referer':location.href,'X-Title':'Thandiani Dashboard'},body:JSON.stringify({model:model,messages:msgs})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(data){var txt=data&&data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:'';if(!txt||!txt.trim())throw new Error('empty');window._lastAI=txt.trim();body.innerHTML=mdLite(txt.trim());busy=false;btn.disabled=false;})
+    .catch(function(){tryModel();});
+  }
+  tryModel();
+}
+
+/* ===================== wire toolbar + AI ===================== */
+document.getElementById('btnXlsx').addEventListener('click',exportXlsx);
+document.getElementById('btnReport').addEventListener('click',downloadReport);
+document.getElementById('btnExport').addEventListener('click',function(){var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='Thandiani_scenario.json';a.click();URL.revokeObjectURL(url);});
+document.getElementById('btnImport').addEventListener('click',function(){document.getElementById('fileImport').click();});
+document.getElementById('fileImport').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){try{Object.assign(S,JSON.parse(rd.result));syncInputLabels();render();scheduleSave();}catch(err){alert('Could not read that file.');}};rd.readAsText(f);});
+document.getElementById('btnReset').addEventListener('click',function(){S=Object.assign({},DEFAULTS);syncInputLabels();render();scheduleSave();});
+document.getElementById('btnGsheet').addEventListener('click',function(){document.getElementById('modalG').classList.add('show');});
+document.getElementById('gCancel').addEventListener('click',function(){document.getElementById('modalG').classList.remove('show');});
+document.getElementById('gPull').addEventListener('click',function(){pullGSheet(document.getElementById('gUrl').value.trim());});
+document.getElementById('ask').addEventListener('click',function(){var q=document.getElementById('q').value.trim();if(q)askAI(q);});
+document.getElementById('q').addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){var q=e.target.value.trim();if(q)askAI(q);}});
+document.getElementById('chips').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;document.getElementById('q').value=b.textContent;askAI(b.textContent);});
+
+/* ===================== init ===================== */
+buildSections();
+loadState(function(){buildInputs();render();setSaved('Saved');});
+
+</script>
+</body>
+</html>
